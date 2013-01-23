@@ -18,7 +18,7 @@ from ctypes import Structure, Union, c_ulong, c_ulonglong, c_size_t
 from ctypes.wintypes import HANDLE, LONG, LPCSTR, LPCWSTR, DWORD
 from collections import namedtuple
 
-__version__      = '0.50b'
+__version__      = '0.50c'
 LPDWORD = PDWORD = ctypes.POINTER(DWORD)
 
 # Mem Stats-------------------------------------------------------------------
@@ -53,7 +53,7 @@ def get_mem_info():
 # Perf Stats -----------------------------------------------------------------
 psapi = ctypes.windll.psapi
 
-class PerformanceInfor(ctypes.Structure):
+class PerformanceInfo(ctypes.Structure):
     ''' I/O struct for Windows .GetPerformanceInfo() call.
         http://msdn.microsoft.com/en-us/library/ms683210
     '''
@@ -75,12 +75,12 @@ class PerformanceInfor(ctypes.Structure):
     ]
     def __init__(self):
         self.size = ctypes.sizeof(self)
-        super(PerformanceInfor, self).__init__()
+        super(PerformanceInfo, self).__init__()
 
 
 def get_perf_info():
     'Has an extra member: SystemCacheBytes'
-    pinfo = PerformanceInfor()
+    pinfo = PerformanceInfo()
     psapi.GetPerformanceInfo(ctypes.byref(pinfo), pinfo.size)
     pinfo.SystemCacheBytes = (pinfo.SystemCache * pinfo.PageSize)
     return pinfo
@@ -284,7 +284,7 @@ if __name__ == '__main__':
     print
 
     print 'Performance Stats:'
-    pinfo = get_perfinfo()
+    pinfo = get_perf_info()
     print '    Cache: %s p' % fmt(pinfo.SystemCache,)
     print '    Cache: %s b' % fmt(pinfo.SystemCacheBytes)
     print
