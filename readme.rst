@@ -10,8 +10,8 @@ Wraps common system status queries from Windows.
 
 **Setup**::
 
-    from winstats import (  get_drives, get_fs_usage, get_meminfo,
-                            get_perfinfo, get_perfdata, get_volinfo )
+    from winstats import ( get_drives, get_fs_usage, get_meminfo,
+                           get_perfinfo, get_perfdata, get_volinfo )
     # optional
     import locale
     locale.setlocale(locale.LC_ALL, '')
@@ -51,8 +51,8 @@ Wraps common system status queries from Windows.
     usage = get_perfdata(r'\Paging File(_Total)\% Usage', fmt='double')
     print '    Pagefile Usage: %.2f %%' % usage
 
-    usage = get_perfdata(r'\Processor(_Total)\% Processor Time', fmt='double',
-                       delay=100)
+    usage = get_perfdata(r'\Processor(_Total)\% Processor Time',
+                         fmt='double', delay=100)
     print '    CPU Usage: %.02f %%' % usage
 
     usage = get_perfdata(r'\Memory\Available MBytes', fmt='large')
