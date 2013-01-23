@@ -46,9 +46,10 @@ Use
 
     drives = get_drives()
     drive = drives[0]
-    print '    Disks:', ', '.join(drives)
     fsinfo = get_fs_usage(drive)
     vinfo = get_volinfo(drive)
+
+    print '    Disks:', ', '.join(drives)
     print '    %s:\\' % drive
     print '        Name:', vinfo.name
     print '        Type:', vinfo.fstype
@@ -72,7 +73,7 @@ Use
 
 
 Results
---------
+---------
 
 ::
 
