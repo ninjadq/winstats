@@ -18,7 +18,7 @@ from ctypes import Structure, Union, c_ulong, c_ulonglong, c_size_t
 from ctypes.wintypes import HANDLE, LONG, LPCSTR, LPCWSTR, DWORD
 from collections import namedtuple
 
-__version__      = '0.50'
+__version__      = '0.50a'
 LPDWORD = PDWORD = ctypes.POINTER(DWORD)
 
 # Mem Stats-------------------------------------------------------------------

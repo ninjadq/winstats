@@ -6,7 +6,7 @@ Windows Stats
 A simple pip-able Windows status retrieval module with no additional
 dependencies.
 
-Wraps common system status queries from Windows.
+Wraps common system status queries from Windows' ugly C-API.
 
 **Setup**::
 
@@ -39,7 +39,7 @@ Wraps common system status queries from Windows.
     fsinfo = get_fs_usage(drive)
     vinfo = get_volinfo(drive)
     print '    %s:\\' % drive
-    print '        Name:', vinfo.name, vinfo.serialno
+    print '        Name:', vinfo.name
     print '        Type:', vinfo.fstype
     print '        Total:', fmt(fsinfo.total)
     print '        Used: ', fmt(fsinfo.used)
@@ -58,3 +58,29 @@ Wraps common system status queries from Windows.
     usage = get_perfdata(r'\Memory\Available MBytes', fmt='large')
     print '    Mem Avail: %s MB' % usage
     print
+
+**Results**::
+
+    D:\> python.exe -m winstats
+
+    Memory Stats:
+        Total: 536,330,240 b
+        usage: 31%
+
+    Performance Stats:
+        Cache: 35,921 p
+        Cache: 147,132,416 b
+
+    Disk Stats:
+        Disks: C, D, O
+        C:\
+            Name: System
+            Type: NTFS
+            Total: 10,725,732,352
+            Used:  3,160,956,928
+            Free:  7,564,775,424
+
+    PerfMon queries:
+        Pagefile Usage: 0.55 %
+        CPU Usage: 0.00 %
+        Mem Avail: 347 MB
