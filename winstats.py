@@ -18,7 +18,7 @@ from ctypes import Structure, Union, c_ulong, c_ulonglong, c_size_t
 from ctypes.wintypes import HANDLE, LONG, LPCSTR, LPCWSTR, DWORD
 from collections import namedtuple
 
-__version__      = '0.50a'
+__version__      = '0.50b'
 LPDWORD = PDWORD = ctypes.POINTER(DWORD)
 
 # Mem Stats-------------------------------------------------------------------
@@ -43,7 +43,7 @@ class MemoryStatusEX(ctypes.Structure):
         super(MemoryStatusEX, self).__init__()
 
 
-def get_meminfo():
+def get_mem_info():
     'Return memory information.'
     minfo = MemoryStatusEX()
     kernel32.GlobalMemoryStatusEx(ctypes.byref(minfo))
@@ -78,7 +78,7 @@ class PerformanceInfor(ctypes.Structure):
         super(PerformanceInfor, self).__init__()
 
 
-def get_perfinfo():
+def get_perf_info():
     'Has an extra member: SystemCacheBytes'
     pinfo = PerformanceInfor()
     psapi.GetPerformanceInfo(ctypes.byref(pinfo), pinfo.size)
@@ -129,14 +129,14 @@ _drive_type_result = {
     5: 'CDROM',
     6: 'RAMDISK',
 }
-def get_drivetype(drive):
+def get_drive_type(drive):
     'Return the type of drive.'
     result = kernel32.GetDriveTypeA(drive)
     return result, _drive_type_result.get(result, 'UNKNOWN')
 
 
 _volinfo = namedtuple('vol_info', 'name fstype serialno length flags')
-def get_volinfo(drive):
+def get_vol_info(drive):
     ''' http://stackoverflow.com/a/12056414/450917
         Could use some improvement, such as flags.
     '''
@@ -209,13 +209,13 @@ class PDH_FMT_COUNTERVALUE(Structure):
         ('union', PDH_Counter_Union),
     ]
 
-def get_pdherr(code):
+def get_pd_err(code):
     'Convert a PDH error code.'
     code &= 2 ** 32 - 1  # signed to unsigned :/
     return _pdh_errcodes.get(code, code)
 
 
-def get_perfdata(counter_name, fmt='long', delay=0):
+def get_perf_data(counter_name, fmt='long', delay=0):
     ''' Wrap up PerfMon's low-level API.
 
         Arguments:
@@ -236,35 +236,35 @@ def get_perfdata(counter_name, fmt='long', delay=0):
     # Open Sie, bitte
     errs = pdh.PdhOpenQueryW(None, 0, byref(hQuery))
     if errs:
-        raise WindowsError, 'PdhOpenQueryW failed: %s' % get_pdherr(errs)
+        raise WindowsError, 'PdhOpenQueryW failed: %s' % get_pd_err(errs)
 
     # Add Counter
     errs = pdh.PdhAddCounterW(hQuery, counter_name, 0, byref(hCounter))
     if errs:
-        raise WindowsError, 'PdhAddCounterW failed: %s' % get_pdherr(errs)
+        raise WindowsError, 'PdhAddCounterW failed: %s' % get_pd_err(errs)
 
     # Collect
     errs = pdh.PdhCollectQueryData(hQuery)
     if errs:
-        raise WindowsError, 'PdhCollectQueryData failed: %s' % get_pdherr(errs)
+        raise WindowsError, 'PdhCollectQueryData failed: %s' % get_pd_err(errs)
     if delay:
         ctypes.windll.kernel32.Sleep(delay)
         errs = pdh.PdhCollectQueryData(hQuery)
         if errs:
             raise WindowsError, ('PdhCollectQueryData failed: %s' %
-                                 get_pdherr(errs))
+                                 get_pd_err(errs))
 
     # Format  # byref(dwType), is optional
     errs = pdh.PdhGetFormattedCounterValue(hCounter, FMT, None,
                                              byref(value))
     if errs:
         raise WindowsError, ('PdhGetFormattedCounterValue failed: %s' %
-                             get_pdherr(errs))
+                             get_pd_err(errs))
 
     # Close
     errs = pdh.PdhCloseQuery(hQuery)
     if errs:
-        raise WindowsError, 'PdhCloseQuery failed: %s' % get_pdherr(errs)
+        raise WindowsError, 'PdhCloseQuery failed: %s' % get_pd_err(errs)
 
     return getattr(value.union, fmt + 'Value')
 
@@ -278,7 +278,7 @@ if __name__ == '__main__':
     fmt = lambda x: locale.format('%d', x, True)
 
     print 'Memory Stats:'
-    meminfo = get_meminfo()
+    meminfo = get_mem_info()
     print '    Total: %s b' % fmt(meminfo.TotalPhys)
     print '    usage: %s%%' % fmt(meminfo.MemoryLoad)
     print
@@ -294,7 +294,7 @@ if __name__ == '__main__':
     drive = drives[0]
     print '    Disks:', ', '.join(drives)
     fsinfo = get_fs_usage('%s:\\' % drive)
-    vinfo = get_volinfo(drive)
+    vinfo = get_vol_info(drive)
     print '    %s:\\' % drive
     print '        Name:', vinfo.name, vinfo.serialno
     print '        Type:', vinfo.fstype
@@ -304,13 +304,13 @@ if __name__ == '__main__':
     print
 
     print 'PerfMon queries:'
-    usage = get_perfdata(r'\Paging File(_Total)\% Usage', fmt='double')
+    usage = get_perf_data(r'\Paging File(_Total)\% Usage', fmt='double')
     print '    Pagefile Usage: %.2f %%' % usage
 
-    usage = get_perfdata(r'\Processor(_Total)\% Processor Time', fmt='double',
+    usage = get_perf_data(r'\Processor(_Total)\% Processor Time', fmt='double',
                        delay=100)
     print '    CPU Usage: %.02f %%' % usage
 
-    usage = get_perfdata(r'\Memory\Available MBytes', fmt='large')
+    usage = get_perf_data(r'\Memory\Available MBytes', fmt='large')
     print '    Mem Avail: %s MB' % usage
     print

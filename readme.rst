@@ -21,8 +21,7 @@ Use
 
 **Setup**::
 
-    from winstats import ( get_drives, get_fs_usage, get_meminfo,
-                           get_perfinfo, get_perfdata, get_volinfo )
+    import winstats
     # optional
     import locale
     locale.setlocale(locale.LC_ALL, '')
@@ -30,24 +29,24 @@ Use
 
 **Memory Stats**::
 
-    meminfo = get_meminfo()
+    meminfo = winstats.get_mem_info()
     print '    Total: %s b' % fmt(meminfo.TotalPhys)
     print '    usage: %s%%' % fmt(meminfo.MemoryLoad)
     print
 
 **Performance Stats**::
 
-    pinfo = get_perfinfo()
+    pinfo = winstats.get_perf_info()
     print '    Cache: %s p' % fmt(pinfo.SystemCache)
     print '    Cache: %s b' % fmt(pinfo.SystemCacheBytes)
     print
 
 **Disk Stats**::
 
-    drives = get_drives()
+    drives = winstats.get_drives()
     drive = drives[0]
-    fsinfo = get_fs_usage(drive)
-    vinfo = get_volinfo(drive)
+    fsinfo = winstats.get_fs_usage(drive)
+    vinfo = winstats.get_vol_info(drive)
 
     print '    Disks:', ', '.join(drives)
     print '    %s:\\' % drive
@@ -60,14 +59,15 @@ Use
 
 **Perfmon - Performance Counters**::
 
-    usage = get_perfdata(r'\Paging File(_Total)\% Usage', fmt='double')
+    usage = winstats.get_perf_data(r'\Paging File(_Total)\% Usage',
+                                   fmt='double')
     print '    Pagefile Usage: %.2f %%' % usage
 
-    usage = get_perfdata(r'\Processor(_Total)\% Processor Time',
-                         fmt='double', delay=100)
+    usage = winstats.get_perf_data(r'\Processor(_Total)\% Processor Time',
+                                   fmt='double', delay=100)
     print '    CPU Usage: %.02f %%' % usage
 
-    usage = get_perfdata(r'\Memory\Available MBytes', fmt='large')
+    usage = winstats.get_perf_data(r'\Memory\Available MBytes', fmt='large')
     print '    Mem Avail: %s MB' % usage
     print
 
