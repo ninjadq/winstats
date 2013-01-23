@@ -8,6 +8,17 @@ dependencies.
 
 Wraps common system status queries from Windows' ugly C-API.
 
+Install
+-------------
+
+::
+
+    D:\> pip install winstats
+
+
+Use
+-----
+
 **Setup**::
 
     from winstats import ( get_drives, get_fs_usage, get_meminfo,
@@ -59,7 +70,11 @@ Wraps common system status queries from Windows' ugly C-API.
     print '    Mem Avail: %s MB' % usage
     print
 
-**Results**::
+
+Results
+--------
+
+::
 
     D:\> python.exe -m winstats
 
