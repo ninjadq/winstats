@@ -215,23 +215,33 @@ def get_pd_err(code):
     return _pdh_errcodes.get(code, code)
 
 
-def get_perf_data(counter_name, fmt='long', delay=0):
+getfmt = lambda fmt: globals().get('PDH_FMT_' + fmt.upper(), PDH_FMT_LONG)
+def get_perf_data(counters, fmts='long', english=False, delay=0):
     ''' Wrap up PerfMon's low-level API.
 
         Arguments:
-            counter_name    Windows PerfMon counter name.
-            fmt             One of 'long', 'double', 'large', 'ansi', 'unicode'
+            counters        Windows PerfMon counter name, or list of.
+            fmts            One of 'long', 'double', 'large', 'ansi', 'unicode'
+                            If a list, must match the length of counters.
+            english         Add locale-neutral counters in English.
             delay           Some metrics need a delay to acquire (as int ms).
         Returns:
-            requested Value
+            requested Value(s) in a list.
         Raises:
             WindowsError
     '''
-    counter_name = unicode(counter_name)
-    FMT = globals().get('PDH_FMT_' + fmt.upper(), PDH_FMT_LONG)
+    if type(counters) is list:  counters = [ unicode(c)  for c in counters ]
+    else:                       counters = [ unicode(counters) ]
+    if type(fmts) is list:
+        ifmts = [ getfmt(fmt)  for fmt in fmts ]
+    else:
+        ifmts = [getfmt(fmts)]
+        fmts  = [fmts]
+    if english:  addfunc = pdh.PdhAddEnglishCounterW
+    else:        addfunc = pdh.PdhAddCounterW
     hQuery = HQUERY()
-    hCounter = HCOUNTER()
-    value = PDH_FMT_COUNTERVALUE()
+    hCounters = []
+    values = []
 
     # Open Sie, bitte
     errs = pdh.PdhOpenQueryW(None, 0, byref(hQuery))
@@ -239,9 +249,12 @@ def get_perf_data(counter_name, fmt='long', delay=0):
         raise WindowsError, 'PdhOpenQueryW failed: %s' % get_pd_err(errs)
 
     # Add Counter
-    errs = pdh.PdhAddCounterW(hQuery, counter_name, 0, byref(hCounter))
-    if errs:
-        raise WindowsError, 'PdhAddCounterW failed: %s' % get_pd_err(errs)
+    for counter in counters:
+        hCounter = HCOUNTER()
+        errs = addfunc(hQuery, counter, 0, byref(hCounter))
+        if errs:
+            raise WindowsError, 'PdhAddCounterW failed: %s' % get_pd_err(errs)
+        hCounters.append(hCounter)
 
     # Collect
     errs = pdh.PdhCollectQueryData(hQuery)
@@ -255,18 +268,23 @@ def get_perf_data(counter_name, fmt='long', delay=0):
                                  get_pd_err(errs))
 
     # Format  # byref(dwType), is optional
-    errs = pdh.PdhGetFormattedCounterValue(hCounter, FMT, None,
-                                             byref(value))
-    if errs:
-        raise WindowsError, ('PdhGetFormattedCounterValue failed: %s' %
-                             get_pd_err(errs))
+    for i, hCounter in enumerate(hCounters):
+        print i, hCounter, ifmts[i]
+        value = PDH_FMT_COUNTERVALUE()
+        errs = pdh.PdhGetFormattedCounterValue(hCounter, ifmts[i], None,
+                                               byref(value))
+        if errs:
+            raise WindowsError, ('PdhGetFormattedCounterValue failed: %s' %
+                                 get_pd_err(errs))
+        values.append(value)
 
     # Close
     errs = pdh.PdhCloseQuery(hQuery)
     if errs:
         raise WindowsError, 'PdhCloseQuery failed: %s' % get_pd_err(errs)
 
-    return getattr(value.union, fmt + 'Value')
+    return tuple([ getattr(value.union, fmts[i] + 'Value')  # tuple makes it
+                   for i, value in enumerate(values) ])     # possible to use %
 
 
 # ----------------------------------------------------------------------------
@@ -304,13 +322,13 @@ if __name__ == '__main__':
     print
 
     print 'PerfMon queries:'
-    usage = get_perf_data(r'\Paging File(_Total)\% Usage', fmt='double')
-    print '    Pagefile Usage: %.2f %%' % usage
-
-    usage = get_perf_data(r'\Processor(_Total)\% Processor Time', fmt='double',
-                       delay=100)
+    # take a second snapshot 100ms after the first:
+    usage = get_perf_data(r'\Processor(_Total)\% Processor Time',
+                                   fmt='double', delay=100)
     print '    CPU Usage: %.02f %%' % usage
 
-    usage = get_perf_data(r'\Memory\Available MBytes', fmt='large')
-    print '    Mem Avail: %s MB' % usage
-    print
+    # query multiple at once:
+    counters = [ r'\Paging File(_Total)\% Usage', r'\Memory\Available MBytes']
+    results = get_perf_data(counters, fmts='double large'.split())
+    print '    Pagefile Usage: %.2f %%, Mem Avail: %s MB' % results
+

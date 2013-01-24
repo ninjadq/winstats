@@ -59,17 +59,15 @@ Use
 
 **Perfmon - Performance Counters**::
 
-    usage = winstats.get_perf_data(r'\Paging File(_Total)\% Usage',
-                                   fmt='double')
-    print '    Pagefile Usage: %.2f %%' % usage
-
+    # take a second snapshot 100ms after the first:
     usage = winstats.get_perf_data(r'\Processor(_Total)\% Processor Time',
                                    fmt='double', delay=100)
     print '    CPU Usage: %.02f %%' % usage
 
-    usage = winstats.get_perf_data(r'\Memory\Available MBytes', fmt='large')
-    print '    Mem Avail: %s MB' % usage
-    print
+    # query multiple at once:
+    counters = [ r'\Paging File(_Total)\% Usage', r'\Memory\Available MBytes']
+    results = winstats.get_perf_data(counters, fmts='double large'.split())
+    print '    Pagefile Usage: %.2f %%, Mem Avail: %s MB' % results
 
 
 Results
@@ -97,6 +95,7 @@ Results
             Free:  7,564,775,424
 
     PerfMon queries:
-        Pagefile Usage: 0.55 %
         CPU Usage: 0.00 %
-        Mem Avail: 347 MB
+        Pagefile Usage: 0.55 %, Mem Avail: 347 MB
+
+And more ...
