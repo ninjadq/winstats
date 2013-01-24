@@ -4,9 +4,15 @@ Windows Stats
 ===============
 
 A simple pip-able Windows status retrieval module with no additional
-dependencies.
+dependencies.  Wraps common system status queries from Windows' ugly C-API:
 
-Wraps common system status queries from Windows' ugly C-API.
+* Memory stats
+* Performance stats
+* Disk info, types, and stats
+* Performance Data Counters (aka PerfMon)
+
+Supports Python 2.6 and above; WindowsXP and above.
+
 
 Install
 -------------
@@ -22,6 +28,7 @@ Use
 **Setup**::
 
     import winstats
+
     # optional
     import locale
     locale.setlocale(locale.LC_ALL, '')
@@ -95,7 +102,7 @@ Results
             Free:  7,564,775,424
 
     PerfMon queries:
-        CPU Usage: 0.00 %
+        CPU Usage: 10.00 %
         Pagefile Usage: 0.55 %, Mem Avail: 347 MB
 
 And more ...

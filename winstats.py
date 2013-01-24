@@ -3,29 +3,28 @@
     A simple pip-able Windows status retrieval module with no additional
     dependencies.
 
-    These helped a lot:
-        http://starship.python.net/crew/mhammond/win32/
-        http://code.activestate.com/recipes/
-            576631-get-cpu-usage-by-using-ctypes-win32-platform/
-        http://msdn.microsoft.com/en-us/library/aa372013%28v=vs.85%29.aspx
-
     License:
         GPL, Version 3+
 '''
 import ctypes, string
-from ctypes import byref
-from ctypes import Structure, Union, c_ulong, c_ulonglong, c_size_t
+from ctypes import (Structure, Union, WinError, byref, c_double, c_longlong,
+                    c_ulong, c_ulonglong, c_size_t, sizeof)
 from ctypes.wintypes import HANDLE, LONG, LPCSTR, LPCWSTR, DWORD
 from collections import namedtuple
 
-__version__      = '0.50c'
+__version__      = '0.60'
 LPDWORD = PDWORD = ctypes.POINTER(DWORD)
+
 
 # Mem Stats-------------------------------------------------------------------
 kernel32 = ctypes.windll.kernel32
 
-class MemoryStatusEX(ctypes.Structure):
-    'Struct for Windows .GlobalMemoryStatusEx() call.'
+class MemoryStatusEX(Structure):
+    ''' I/O Struct for Windows .GlobalMemoryStatusEx() call.
+
+        Docs:
+            http://msdn.microsoft.com/en-us/library/windows/desktop/aa366770
+    '''
     _fields_ = [
         ('Length', c_ulong),
         ('MemoryLoad', c_ulong),
@@ -39,23 +38,29 @@ class MemoryStatusEX(ctypes.Structure):
     ]
     def __init__(self):
         # have to initialize this to the size of MemoryStatusEX
-        self.Length = ctypes.sizeof(self)
+        self.Length = sizeof(self)
         super(MemoryStatusEX, self).__init__()
 
 
 def get_mem_info():
-    'Return memory information.'
-    minfo = MemoryStatusEX()
-    kernel32.GlobalMemoryStatusEx(ctypes.byref(minfo))
-    return minfo
+    ''' Returns a Windows Memory Status info object.
+
+        Docs:
+            http://msdn.microsoft.com/en-us/library/windows/desktop/aa366589
+    '''
+    meminfo = MemoryStatusEX()
+    kernel32.GlobalMemoryStatusEx(byref(meminfo))
+    return meminfo
 
 
 # Perf Stats -----------------------------------------------------------------
 psapi = ctypes.windll.psapi
 
-class PerformanceInfo(ctypes.Structure):
+class PerformanceInfo(Structure):
     ''' I/O struct for Windows .GetPerformanceInfo() call.
-        http://msdn.microsoft.com/en-us/library/ms683210
+
+        Docs:
+            http://msdn.microsoft.com/en-us/library/ms684824
     '''
     _fields_ = [
         ('size',        c_ulong),
@@ -74,14 +79,20 @@ class PerformanceInfo(ctypes.Structure):
         ('ThreadCount', c_ulong),
     ]
     def __init__(self):
-        self.size = ctypes.sizeof(self)
+        self.size = sizeof(self)
         super(PerformanceInfo, self).__init__()
 
 
 def get_perf_info():
-    'Has an extra member: SystemCacheBytes'
+    ''' Returns a Windows Performance info object.
+
+        Docs:
+            http://msdn.microsoft.com/en-us/library/ms683210
+        Note:
+            Has an extra convenience member: SystemCacheBytes
+    '''
     pinfo = PerformanceInfo()
-    psapi.GetPerformanceInfo(ctypes.byref(pinfo), pinfo.size)
+    psapi.GetPerformanceInfo(byref(pinfo), pinfo.size)
     pinfo.SystemCacheBytes = (pinfo.SystemCache * pinfo.PageSize)
     return pinfo
 
@@ -90,26 +101,38 @@ def get_perf_info():
 _diskusage = namedtuple('disk_usage', 'total used free')
 
 def get_fs_usage(drive):
-    ''' http://code.activestate.com/recipes/577972-disk-usage/
-        raises WinError
+    ''' Return stats for the given drive.
+
+        Arguments:
+            drive       Drive letter.
+        Returns:
+            A named tuple with total, used, and free members.
+        Raises:
+            ctypes.WinError
+        Recipe:
+            http://code.activestate.com/recipes/577972-disk-usage/
     '''
     if len(drive) < 3:
         drive = drive + ':\\'
     _, total, free = c_ulonglong(), c_ulonglong(), c_ulonglong()
-    #~ if sys.version_info >= (3,) or isinstance(drive, unicode):
-        #~ fun = kernel32.GetDiskFreeSpaceExW
-    #~ else:
-    fun = kernel32.GetDiskFreeSpaceExA
-    ret = fun(str(drive), ctypes.byref(_), ctypes.byref(total),
-              ctypes.byref(free))
+    if isinstance(drive, unicode):
+        fun = kernel32.GetDiskFreeSpaceExW
+    else:
+        fun = kernel32.GetDiskFreeSpaceExA
+
+    ret = fun(str(drive), byref(_), byref(total), byref(free))
     if ret == 0:
-        raise ctypes.WinError()
+        raise WinError()
     used = total.value - free.value
+
     return _diskusage(total.value, used, free.value)
 
 
 def get_drives():
-    'http://stackoverflow.com/a/827398/450917'
+    ''' Return a list of current drive letters.
+        Recipe:
+            http://stackoverflow.com/a/827398/450917
+    '''
     drives = []
     bitmask = kernel32.GetLogicalDrives()
     for letter in string.uppercase:
@@ -120,7 +143,7 @@ def get_drives():
     return drives
 
 
-_drive_type_result = {
+_drive_types = {
     0: 'UNKNOWN',
     1: 'NO_ROOT_DIR',
     2: 'REMOVABLE',
@@ -129,16 +152,31 @@ _drive_type_result = {
     5: 'CDROM',
     6: 'RAMDISK',
 }
+
 def get_drive_type(drive):
-    'Return the type of drive.'
+    ''' Return the type of the given drive, such as
+            Fixed, Remote, Optical, etc as a string.
+
+        Docs:
+            http://msdn.microsoft.com/en-us/library/windows/desktop/aa364939
+    '''
     result = kernel32.GetDriveTypeA(drive)
-    return result, _drive_type_result.get(result, 'UNKNOWN')
+    return result, _drive_types.get(result, 'UNKNOWN')
 
 
 _volinfo = namedtuple('vol_info', 'name fstype serialno length flags')
+
 def get_vol_info(drive):
-    ''' http://stackoverflow.com/a/12056414/450917
-        Could use some improvement, such as flags.
+    ''' Retrieve Volume Info for the given drive.
+
+        Docs:
+            http://msdn.microsoft.com/en-us/library/windows/desktop/aa364993
+        Returns:
+            A named tuple containing name and fstype members.
+        Note:
+            Could use some improvement, such as implementing filesystem flags.
+        Recipe:
+            http://stackoverflow.com/a/12056414/450917
     '''
     if len(drive) < 3:
         drive = drive + ':\\'
@@ -152,12 +190,12 @@ def get_vol_info(drive):
     kernel32.GetVolumeInformationW(
         ctypes.c_wchar_p(drive),
         nameBuf,
-        ctypes.sizeof(nameBuf),
+        sizeof(nameBuf),
         serialno,
         max_component_length,
         file_system_flags,
         fsTypeBuf,
-        ctypes.sizeof(fsTypeBuf)
+        sizeof(fsTypeBuf)
     )
     try:                serialno = serialno.contents  # NULL pointer access
     except ValueError:  serialno = None               # not sure what to do
@@ -167,6 +205,7 @@ def get_vol_info(drive):
 # PerfMon --------------------------------------------------------------------
 HQUERY = HCOUNTER = HANDLE
 pdh             = ctypes.windll.pdh
+# http://msdn.microsoft.com/en-us/library/windows/desktop/aa372637
 PDH_FMT_RAW     = 16L
 PDH_FMT_ANSI    = 32L
 PDH_FMT_UNICODE = 64L
@@ -176,7 +215,8 @@ PDH_FMT_LARGE   = 1024L
 PDH_FMT_1000    = 8192L
 PDH_FMT_NODATA  = 16384L
 PDH_FMT_NOSCALE = 4096L
-#~ dwType = DWORD(0)
+
+# http://msdn.microsoft.com/en-us/library/aa373046
 _pdh_errcodes = {
     0x00000000: 'PDH_CSTATUS_VALID_DATA',
     0x800007d0: 'PDH_CSTATUS_NO_MACHINE',
@@ -195,40 +235,48 @@ _pdh_errcodes = {
 }
 
 class PDH_Counter_Union(Union):
+    'http://msdn.microsoft.com/en-us/library/windows/desktop/aa373050'
     _fields_ = [
         ('longValue', LONG),
-        ('doubleValue', ctypes.c_double),
-        ('largeValue', ctypes.c_longlong),
+        ('doubleValue', c_double),
+        ('largeValue', c_longlong),
         ('ansiValue', LPCSTR),              # aka AnsiString...
         ('unicodeValue', LPCWSTR)           # aka WideString..
     ]
 
-class PDH_FMT_COUNTERVALUE(Structure):
+class PDHFmtCounterValue(Structure):
+    'http://msdn.microsoft.com/en-us/library/aa373050'
     _fields_ = [
         ('CStatus', DWORD),
         ('union', PDH_Counter_Union),
     ]
 
 def get_pd_err(code):
-    'Convert a PDH error code.'
+    'Convert a PDH error code to a human readable string.'
     code &= 2 ** 32 - 1  # signed to unsigned :/
     return _pdh_errcodes.get(code, code)
 
 
 getfmt = lambda fmt: globals().get('PDH_FMT_' + fmt.upper(), PDH_FMT_LONG)
+
 def get_perf_data(counters, fmts='long', english=False, delay=0):
     ''' Wrap up PerfMon's low-level API.
 
         Arguments:
-            counters        Windows PerfMon counter name, or list of.
+            counters        Localized Windows PerfMon counter name, or list of.
             fmts            One of 'long', 'double', 'large', 'ansi', 'unicode'
                             If a list, must match the length of counters.
             english         Add locale-neutral counters in English.
-            delay           Some metrics need a delay to acquire (as int ms).
+            delay           Some metrics need a second attempt after a delay
+                            to acquire (as int ms).
         Returns:
-            requested Value(s) in a list.
+            Tuple of requested counter value(s).
         Raises:
             WindowsError
+        Recipes:
+            http://msdn.microsoft.com/en-us/library/windows/desktop/aa373214
+            http://code.activestate.com/recipes/
+                576631-get-cpu-usage-by-using-ctypes-win32-platform/
     '''
     if type(counters) is list:  counters = [ unicode(c)  for c in counters ]
     else:                       counters = [ unicode(counters) ]
@@ -261,16 +309,15 @@ def get_perf_data(counters, fmts='long', english=False, delay=0):
     if errs:
         raise WindowsError, 'PdhCollectQueryData failed: %s' % get_pd_err(errs)
     if delay:
-        ctypes.windll.kernel32.Sleep(delay)
+        kernel32.Sleep(delay)
         errs = pdh.PdhCollectQueryData(hQuery)
         if errs:
             raise WindowsError, ('PdhCollectQueryData failed: %s' %
                                  get_pd_err(errs))
 
-    # Format  # byref(dwType), is optional
+    # Format
     for i, hCounter in enumerate(hCounters):
-        print i, hCounter, ifmts[i]
-        value = PDH_FMT_COUNTERVALUE()
+        value = PDHFmtCounterValue()
         errs = pdh.PdhGetFormattedCounterValue(hCounter, ifmts[i], None,
                                                byref(value))
         if errs:
@@ -324,7 +371,7 @@ if __name__ == '__main__':
     print 'PerfMon queries:'
     # take a second snapshot 100ms after the first:
     usage = get_perf_data(r'\Processor(_Total)\% Processor Time',
-                                   fmt='double', delay=100)
+                                   fmts='double', delay=100)
     print '    CPU Usage: %.02f %%' % usage
 
     # query multiple at once:
