@@ -80,7 +80,7 @@ Use
 Results
 ---------
 
-::
+The examples above are built into the module::
 
     D:\> python.exe -m winstats
 
