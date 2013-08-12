@@ -3,7 +3,7 @@
 Windows Stats
 ===============
 
-A simple pip-able Windows status retrieval module with no additional
+A simple Windows status retrieval module with no additional
 dependencies.  Wraps common system status queries from Windows' ugly C-API:
 
 * Memory stats
@@ -12,6 +12,8 @@ dependencies.  Wraps common system status queries from Windows' ugly C-API:
 * Performance Data Counters (aka PerfMon)
 
 Supports Python 2.6 and above; WindowsXP and above.
+
+*Note:* Relicensed as LGPL v3 (or later).
 
 
 Install
@@ -32,7 +34,7 @@ Use
     # optional
     import locale
     locale.setlocale(locale.LC_ALL, '')
-    fmt = lambda x: locale.format('%d', x, True)
+    fmt = lambda n: locale.format('%d', n, True)
 
 **Memory Stats**::
 
@@ -80,7 +82,8 @@ Use
 Results
 ---------
 
-The examples above are built into the module::
+The examples above are built into the module, and double as a minimal test
+suite::
 
     D:\> python.exe -m winstats
 

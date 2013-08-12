@@ -4,7 +4,7 @@
     dependencies.
 
     License:
-        GPL, Version 3+
+        LGPL, Version 3 (or later)
 '''
 import ctypes, string
 from ctypes import (Structure, Union, WinError, byref, c_double, c_longlong,
@@ -12,7 +12,7 @@ from ctypes import (Structure, Union, WinError, byref, c_double, c_longlong,
 from ctypes.wintypes import HANDLE, LONG, LPCSTR, LPCWSTR, DWORD
 from collections import namedtuple
 
-__version__      = '0.61'
+__version__      = '0.64'
 LPDWORD = PDWORD = ctypes.POINTER(DWORD)
 
 

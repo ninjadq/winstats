@@ -23,13 +23,12 @@ except IOError:
 setup(
     name          = 'winstats',
     version       = version,
-    description   = 'A simple pip-able Windows status retrieval module ' +
-                    'with no dependencies.',
+    description   = 'A simple Windows status retrieval module ' +
+                    'with no additional dependencies.',
     author        = 'Mike Miller',
     author_email  = 'mixmastamyk@bitbucket.org',
     url           = 'https://bitbucket.org/mixmastamyk/winstats',
     download_url  = 'https://bitbucket.org/mixmastamyk/winstats/get/default.tar.gz',
-    license       = 'GPLv3',
     py_modules    = ['winstats'],
 
     long_description = long_description,
@@ -38,7 +37,7 @@ setup(
         'Environment :: Win32 (MS Windows)',
         'Intended Audience :: Developers',
         'Intended Audience :: System Administrators',
-        'License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)',
+        'License :: OSI Approved :: GNU Lesser General Public License v3 or later (LGPLv3+)',
         'Operating System :: Microsoft :: Windows :: Windows 7',
         'Operating System :: Microsoft :: Windows :: Windows XP',
         'Programming Language :: Python',
