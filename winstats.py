@@ -294,6 +294,7 @@ def get_perf_data(counters, fmts='long', english=False, delay=0):
     # Open Sie, bitte
     errs = pdh.PdhOpenQueryW(None, 0, byref(hQuery))
     if errs:
+        pdh.PdhCloseQuery(hQuery)
         raise WindowsError, 'PdhOpenQueryW failed: %s' % get_pd_err(errs)
 
     # Add Counter
@@ -301,17 +302,20 @@ def get_perf_data(counters, fmts='long', english=False, delay=0):
         hCounter = HCOUNTER()
         errs = addfunc(hQuery, counter, 0, byref(hCounter))
         if errs:
+            pdh.PdhCloseQuery(hQuery)
             raise WindowsError, 'PdhAddCounterW failed: %s' % get_pd_err(errs)
         hCounters.append(hCounter)
 
     # Collect
     errs = pdh.PdhCollectQueryData(hQuery)
     if errs:
+        pdh.PdhCloseQuery(hQuery)
         raise WindowsError, 'PdhCollectQueryData failed: %s' % get_pd_err(errs)
     if delay:
         kernel32.Sleep(delay)
         errs = pdh.PdhCollectQueryData(hQuery)
         if errs:
+            pdh.PdhCloseQuery(hQuery)
             raise WindowsError, ('PdhCollectQueryData failed: %s' %
                                  get_pd_err(errs))
 
@@ -321,6 +325,7 @@ def get_perf_data(counters, fmts='long', english=False, delay=0):
         errs = pdh.PdhGetFormattedCounterValue(hCounter, ifmts[i], None,
                                                byref(value))
         if errs:
+            pdh.PdhCloseQuery(hQuery)
             raise WindowsError, ('PdhGetFormattedCounterValue failed: %s' %
                                  get_pd_err(errs))
         values.append(value)
